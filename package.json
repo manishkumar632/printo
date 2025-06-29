@@ -1,0 +1,21 @@
+{
+  "name": "printo-fullstack",
+  "version": "1.0.0",
+  "description": "PrintO - Custom Apparel Printing Platform",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend/printo && npm run dev",
+    "build": "cd frontend/printo && npm run build",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend/printo && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend/printo && npm install"
+  },
+  "keywords": ["printo", "fullstack", "custom-apparel", "printing"],
+  "author": "PrintO Team",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
