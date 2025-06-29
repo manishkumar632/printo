@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
@@ -17,7 +18,7 @@ connectDB();
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://zp1v56uxy8rdx5ypatb0ockcb9tr6a-oci3--3000--cb7c0bca.local-credentialless.webcontainer-api.io'] 
+    ? ['https://zp1v56uxy8rdx5ypatb0ockcb9tr6a-oci3.w-credentialless-staticblitz.com'] 
     : ['http://localhost:3000'],
   credentials: true
 }));
