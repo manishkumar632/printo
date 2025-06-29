@@ -1,13 +1,33 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { generateTokens, authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Middleware to check if database is connected
+const checkDB = (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ 
+      message: 'Database not available. Please try again later.' 
+    });
+  }
+  next();
+};
+
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', checkDB, async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
+
+    // Validate input
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -48,9 +68,13 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', checkDB, async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     // Find user
     const user = await User.findOne({ email });
@@ -87,7 +111,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Refresh token
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', checkDB, async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
@@ -124,10 +148,12 @@ router.post('/refresh', async (req, res) => {
 // Logout
 router.post('/logout', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
-    if (user) {
-      user.refreshToken = null;
-      await user.save();
+    if (mongoose.connection.readyState === 1) {
+      const user = await User.findById(req.user.userId);
+      if (user) {
+        user.refreshToken = null;
+        await user.save();
+      }
     }
 
     res.json({ message: 'Logout successful' });
@@ -138,7 +164,7 @@ router.post('/logout', authenticateToken, async (req, res) => {
 });
 
 // Get current user
-router.get('/me', authenticateToken, async (req, res) => {
+router.get('/me', authenticateToken, checkDB, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
