@@ -61,7 +61,7 @@ const TestimonialsSection = () => {
               </div>
               
               <p className="text-gray-700 italic">
-                "{testimonial.content}"
+                &quot;{testimonial.content}&quot;
               </p>
             </div>
           ))}

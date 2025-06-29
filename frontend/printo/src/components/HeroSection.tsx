@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 
 const HeroSection = () => {
   return (
@@ -13,7 +12,7 @@ const HeroSection = () => {
                 Design & Print Custom Apparel With Ease
               </h1>
               <p className="text-xl text-purple-100 max-w-lg">
-                Upload your designs, choose your products, and we'll handle the rest. Quality printing, fast shipping, no minimum orders.
+                Upload your designs, choose your products, and we&apos;ll handle the rest. Quality printing, fast shipping, no minimum orders.
               </p>
             </div>
             

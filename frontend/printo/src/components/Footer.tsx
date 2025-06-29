@@ -14,7 +14,7 @@ const Footer = () => {
               <span className="ml-2 text-xl font-bold">PrintO</span>
             </div>
             <p className="text-gray-400 mb-4 max-w-md">
-              Create custom apparel with ease. Upload your designs, choose your products, and we'll handle the rest. 
+              Create custom apparel with ease. Upload your designs, choose your products, and we&apos;ll handle the rest. 
               Quality printing, fast shipping, no minimum orders.
             </p>
             <div className="flex space-x-4">
