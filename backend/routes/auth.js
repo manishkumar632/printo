@@ -1,15 +1,15 @@
 import express from 'express';
-import mongoose from 'mongoose';
-import User from '../models/User.js';
+import { supabase } from '../config/supabase.js';
+import UserSupabase from '../models/UserSupabase.js';
 import { generateTokens, authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Middleware to check if database is connected
 const checkDB = (req, res, next) => {
-  if (mongoose.connection.readyState !== 1) {
+  if (!supabase) {
     return res.status(503).json({ 
-      message: 'Database not available. Please try again later.' 
+      message: 'Database not available. Please connect to Supabase first.' 
     });
   }
   next();
@@ -30,40 +30,40 @@ router.post('/register', checkDB, async (req, res) => {
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await UserSupabase.findByEmail(email);
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
     // Create new user
-    const user = new User({
+    const user = await UserSupabase.create({
       firstName,
       lastName,
       email,
       password
     });
 
-    await user.save();
-
     // Generate tokens
     const { accessToken, refreshToken } = generateTokens({
-      userId: user._id,
+      userId: user.id,
       email: user.email
     });
 
     // Save refresh token
-    user.refreshToken = refreshToken;
-    await user.save();
+    await UserSupabase.updateRefreshToken(user.id, refreshToken);
+
+    // Remove sensitive data from response
+    const { refreshToken: _, ...userResponse } = user;
 
     res.status(201).json({
       message: 'User registered successfully',
-      user,
+      user: userResponse,
       accessToken,
       refreshToken
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'Server error during registration' });
+    res.status(500).json({ message: error.message || 'Server error during registration' });
   }
 });
 
@@ -77,36 +77,38 @@ router.post('/login', checkDB, async (req, res) => {
     }
 
     // Find user
-    const user = await User.findOne({ email });
+    const user = await UserSupabase.findByEmail(email);
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     // Check password
-    const isPasswordValid = await user.comparePassword(password);
+    const isPasswordValid = await UserSupabase.comparePassword(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     // Generate tokens
     const { accessToken, refreshToken } = generateTokens({
-      userId: user._id,
+      userId: user.id,
       email: user.email
     });
 
     // Save refresh token
-    user.refreshToken = refreshToken;
-    await user.save();
+    await UserSupabase.updateRefreshToken(user.id, refreshToken);
+
+    // Remove sensitive data from response
+    const { password: _, refreshToken: __, ...userResponse } = user;
 
     res.json({
       message: 'Login successful',
-      user,
+      user: userResponse,
       accessToken,
       refreshToken
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    res.status(500).json({ message: error.message || 'Server error during login' });
   }
 });
 
@@ -120,20 +122,26 @@ router.post('/refresh', checkDB, async (req, res) => {
     }
 
     // Find user with this refresh token
-    const user = await User.findOne({ refreshToken });
-    if (!user) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('refresh_token', refreshToken)
+      .single();
+
+    if (error || !data) {
       return res.status(403).json({ message: 'Invalid refresh token' });
     }
 
+    const user = UserSupabase.formatUser(data);
+
     // Generate new tokens
     const { accessToken, refreshToken: newRefreshToken } = generateTokens({
-      userId: user._id,
+      userId: user.id,
       email: user.email
     });
 
     // Update refresh token
-    user.refreshToken = newRefreshToken;
-    await user.save();
+    await UserSupabase.updateRefreshToken(user.id, newRefreshToken);
 
     res.json({
       accessToken,
@@ -148,12 +156,8 @@ router.post('/refresh', checkDB, async (req, res) => {
 // Logout
 router.post('/logout', authenticateToken, async (req, res) => {
   try {
-    if (mongoose.connection.readyState === 1) {
-      const user = await User.findById(req.user.userId);
-      if (user) {
-        user.refreshToken = null;
-        await user.save();
-      }
+    if (supabase) {
+      await UserSupabase.updateRefreshToken(req.user.userId, null);
     }
 
     res.json({ message: 'Logout successful' });
@@ -166,12 +170,15 @@ router.post('/logout', authenticateToken, async (req, res) => {
 // Get current user
 router.get('/me', authenticateToken, checkDB, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
+    const user = await UserSupabase.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json({ user });
+    // Remove sensitive data from response
+    const { password: _, refreshToken: __, ...userResponse } = user;
+
+    res.json({ user: userResponse });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ message: 'Server error' });

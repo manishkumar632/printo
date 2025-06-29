@@ -1,8 +1,7 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import connectDB from './config/database.js';
+import { supabase } from './config/supabase.js';
 import authRoutes from './routes/auth.js';
 import apiRoutes from './routes/index.js';
 
@@ -11,9 +10,6 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Connect to MongoDB (non-blocking)
-connectDB();
 
 // Middleware
 app.use(cors({
@@ -38,7 +34,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       api: '/api'
     },
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    database: supabase ? 'connected' : 'not configured'
   });
 });
 
@@ -49,7 +45,7 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     uptime: process.uptime(),
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    database: supabase ? 'connected' : 'not configured'
   });
 });
 
@@ -71,5 +67,5 @@ app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 API URL: http://localhost:${PORT}`);
-  console.log(`📊 Database: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
+  console.log(`📊 Database: ${supabase ? 'Supabase Connected' : 'Not Configured - Click "Connect to Supabase" button'}`);
 });
